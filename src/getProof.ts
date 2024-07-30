@@ -2,8 +2,7 @@ import axios from "axios";
 import 'dotenv/config'
 import { getProof } from "./lib/bitcoin-proof";
 
-const getBlocksURL = "https://btc.getblock.io/mainnet/";
-const getBlocksAPIKey = process.env.API_KEY;
+const getBlocksURL = "https://go.getblock.io/0630c505482443c28b71859ca001ce14";
 
 async function getBtcBlock(blockhash: string) {
   // Get the "bestblock" information
@@ -19,7 +18,6 @@ async function getBtcBlock(blockhash: string) {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "x-api-key": getBlocksAPIKey,
       },
     }
   );
@@ -39,7 +37,6 @@ async function getRawTransaction(txid: string) {
       headers: {
         "Content-Type": "application/json",
         Accept: "application/json",
-        "x-api-key": getBlocksAPIKey,
       },
     }
   );
