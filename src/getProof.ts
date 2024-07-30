@@ -20,7 +20,8 @@ export function swapEndian(hex: string): string {
 }
 
 const BTC_RPC = process.env.BTC_RPC;
-if (BTC_RPC === undefined) throw Error("No Bitcoin RPC Error");
+if (BTC_RPC === undefined)
+  throw Error("No Bitcoin RPC Error (env.BTC_RPC === UNDEFINED)");
 const getBlocksURL = BTC_RPC ? BTC_RPC : "";
 
 export async function getBtcBlockHash(height: number): Promise<string> {

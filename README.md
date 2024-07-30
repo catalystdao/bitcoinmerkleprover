@@ -1,3 +1,7 @@
-To use, run:
+To use, import relevant functions from `src/getProof.ts`
 
-`npx ts-node src/getProof.ts`
+Examples of usage can be found in `src/examples/test.ts`. These can be run using:
+
+```bash
+npx ts-node src/examples/test.ts
+```
