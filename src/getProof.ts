@@ -1,10 +1,48 @@
 import axios from "axios";
-import 'dotenv/config'
+import "dotenv/config";
 import { getProof } from "./lib/bitcoin-proof";
 
-const getBlocksURL = "https://go.getblock.io/0630c505482443c28b71859ca001ce14";
+import type { Block, Transaction, Proof } from "./types";
 
-async function getBtcBlock(blockhash: string) {
+export function swapEndian(hex: string): string {
+  // Ensure the hex string has an even number of characters
+  if (hex.length % 2 !== 0) {
+    hex = "0" + hex;
+  }
+  // Split the hex string into pairs of characters
+  let pairs = hex.match(/.{1,2}/g);
+  if (pairs == null) throw Error("Invalid hex encoded decimal number");
+  // Reverse the pairs
+  let reversedHexPairs = pairs.reverse();
+  // Join the reversed pairs back into a string
+  let reversedHex = reversedHexPairs.join("");
+  return reversedHex;
+}
+
+const BTC_RPC = process.env.BTC_RPC;
+if (BTC_RPC === undefined) throw Error("No Bitcoin RPC Error");
+const getBlocksURL = BTC_RPC ? BTC_RPC : "";
+
+export async function getBtcBlockHash(height: number): Promise<string> {
+  const res = await axios.post(
+    getBlocksURL,
+    JSON.stringify({
+      jsonrpc: "2.0",
+      method: "getblockhash",
+      params: [height],
+      id: "getblock.io",
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    },
+  );
+  return res.data.result;
+}
+
+export async function getBtcBlock(blockhash: string): Promise<Block> {
   // Get the "bestblock" information
   const res = await axios.post(
     getBlocksURL,
@@ -19,12 +57,12 @@ async function getBtcBlock(blockhash: string) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-    }
+    },
   );
   return res.data.result;
 }
 
-async function getRawTransaction(txid: string) {
+export async function getRawTransaction(txid: string): Promise<Transaction> {
   const res = await axios.post(
     getBlocksURL,
     JSON.stringify({
@@ -38,22 +76,41 @@ async function getRawTransaction(txid: string) {
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-    }
+    },
   );
+  console.log(res.data.result);
   return res.data.result;
 }
 
-
-async function generateProof(txid: string) {
+export async function generateProof(
+  txid: string,
+): Promise<{ blockHeader: string; proof: Proof }> {
   const rawTx = await getRawTransaction(txid);
 
   const block = await getBtcBlock(rawTx.blockhash);
-  const txIndex = block.tx.indexOf(txid);
+  const txIndex: number = block.tx.indexOf(txid);
   const proof = await getProof(block.tx, txIndex);
+  const blockHeader = generateBlockHeader(block);
 
-  return proof;
+  return { blockHeader, proof };
 }
 
-const txid = "f2abcea74b697724fd5578302716d2ea30d61f807d377de87cea53529f00f045";
-
-generateProof(txid).then(val => console.log(val));
+export function generateBlockHeader(block: {
+  versionHex: string;
+  previousblockhash: string;
+  merkleroot: string;
+  time: number;
+  bits: string;
+  nonce: number;
+}): string {
+  const { versionHex, previousblockhash, merkleroot, time, bits, nonce } =
+    block;
+  return (
+    swapEndian(versionHex) +
+    swapEndian(previousblockhash) +
+    swapEndian(merkleroot) +
+    swapEndian(time.toString(16)) +
+    swapEndian(bits) +
+    swapEndian(nonce.toString(16))
+  );
+}
