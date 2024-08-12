@@ -79,21 +79,20 @@ export async function getRawTransaction(txid: string): Promise<Transaction> {
       },
     },
   );
-  console.log(res.data.result);
   return res.data.result;
 }
 
 export async function generateProof(
   txid: string,
-): Promise<{ blockHeader: string; proof: Proof }> {
-  const rawTx = await getRawTransaction(txid);
+): Promise<{ blockHeader: string; proof: Proof, rawTx: string }> {
+  const tx = await getRawTransaction(txid);
 
-  const block = await getBtcBlock(rawTx.blockhash);
+  const block = await getBtcBlock(tx.blockhash);
   const txIndex: number = block.tx.indexOf(txid);
   const proof = await getProof(block.tx, txIndex);
   const blockHeader = generateBlockHeader(block);
 
-  return { blockHeader, proof };
+  return { blockHeader, proof, rawTx: tx.hex };
 }
 
 export function generateBlockHeader(block: {
