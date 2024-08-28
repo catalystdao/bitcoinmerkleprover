@@ -5,18 +5,18 @@ import {
   generateBlockHeader,
 } from "../getProof";
 
-const txid = "f2abcea74b697724fd5578302716d2ea30d61f807d377de87cea53529f00f045";
+const txid = "3836352218be851ebb4685d7f3a22dde70a66b52a965e62c2a0bfa0988cdd0ba";
 
 generateProof(txid).then((val) => console.log(val));
 
-getBtcBlockHash(717696).then((blockhash) =>
-  getBtcBlock(blockhash).then((block) =>
-    console.log(generateBlockHeader(block)),
-  ),
-);
+// getBtcBlockHash(717696).then((blockhash) =>
+//   getBtcBlock(blockhash).then((block) =>
+//     console.log(generateBlockHeader(block)),
+//   ),
+// );
 
-getBtcBlockHash(717697).then((blockhash) =>
-  getBtcBlock(blockhash).then((block) =>
-    console.log(generateBlockHeader(block)),
-  ),
-);
+// getBtcBlockHash(717697).then((blockhash) =>
+//   getBtcBlock(blockhash).then((block) =>
+//     console.log(generateBlockHeader(block)),
+//   ),
+// );
