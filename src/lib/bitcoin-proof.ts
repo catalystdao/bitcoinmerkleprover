@@ -2,10 +2,16 @@
 
 /** Produces a Merkle proof for a single tx within a list. */
 export async function getProof(txIds: string[], txIndex: number) {
-  const proof: { txId: string, txIndex: number, sibling: string[] } = {
+  const proof: {
+    txId: string;
+    txIndex: number;
+    sibling: string[];
+    concatedSiblings: string;
+  } = {
     txId: txIds[txIndex],
     txIndex: txIndex,
     sibling: [],
+    concatedSiblings: "",
   };
 
   let tree: Uint8Array[] = new Array(txIds.length);
@@ -24,9 +30,11 @@ export async function getProof(txIds: string[], txIndex: number) {
 
       if (isEqual(target, hash1)) {
         proof.sibling.push(toHex(reverse(hash2)));
+        proof.concatedSiblings += toHex(hash2);
         target = newTree[j / 2];
       } else if (isEqual(target, hash2)) {
         proof.sibling.push(toHex(reverse(hash1)));
+        proof.concatedSiblings += toHex(hash1);
         target = newTree[j / 2];
       }
     }
@@ -88,7 +96,7 @@ export async function getMerkleRoot(txIds: string[]) {
 let nodeCrypto: null | any = null;
 try {
   nodeCrypto = require("crypto");
-} catch (_) { }
+} catch (_) {}
 
 /** Computes a double-SHA256 hash of [a, b]. Async in-browser. */
 async function sha256x2(
@@ -139,7 +147,7 @@ function isEqual(buf1: Uint8Array, buf2: Uint8Array) {
 function fromHex(hex: string): Uint8Array {
   return new Uint8Array(
     // ts-ignore
-    hex.match(/[\da-f]{2}/gi)!.map(function(h) {
+    hex.match(/[\da-f]{2}/gi)!.map(function (h) {
       return parseInt(h, 16);
     })
   );
@@ -148,7 +156,7 @@ function fromHex(hex: string): Uint8Array {
 /** Print Uint8Array to hex */
 function toHex(arr: Uint8Array): string {
   return Array.prototype.map
-    .call(arr, function(byte: number) {
+    .call(arr, function (byte: number) {
       return ("0" + (byte & 0xff).toString(16)).slice(-2);
     })
     .join("");
