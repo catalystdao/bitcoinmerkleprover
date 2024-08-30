@@ -114,3 +114,7 @@ export function generateBlockHeader(block: {
     swapEndian(nonce.toString(16))
   );
 }
+
+export function getExpectedTarget(block: Block) {
+  return "0x"+block.bits.slice(3).padEnd(45, "0").padStart(64, "0");
+}
