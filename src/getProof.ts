@@ -63,6 +63,25 @@ export async function getBtcBlock(blockhash: string): Promise<Block> {
   return res.data.result;
 }
 
+export async function getBlockHeight(): Promise<number> {
+  const res = await axios.post(
+    getBlocksURL,
+    JSON.stringify({
+      jsonrpc: "2.0",
+      method: "getblockcount",
+      params: [],
+      id: "getblock.io",
+    }),
+    {
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+    },
+  );
+  return res.data.result;
+}
+
 export async function getRawTransaction(txid: string): Promise<Transaction> {
   const res = await axios.post(
     getBlocksURL,
@@ -84,7 +103,7 @@ export async function getRawTransaction(txid: string): Promise<Transaction> {
 
 export async function generateProof(
   txid: string,
-): Promise<{ blockHeader: string; proof: Proof, rawTx: string }> {
+): Promise<{ blockHeader: string; proof: Proof; rawTx: string }> {
   const tx = await getRawTransaction(txid);
 
   const block = await getBtcBlock(tx.blockhash);
@@ -109,12 +128,59 @@ export function generateBlockHeader(block: {
     swapEndian(versionHex) +
     swapEndian(previousblockhash) +
     swapEndian(merkleroot) +
-    swapEndian(time.toString(16)) +
+    swapEndian(time.toString(16).padStart(8, "0")) +
     swapEndian(bits) +
-    swapEndian(nonce.toString(16))
+    swapEndian(nonce.toString(16).padStart(8, "0"))
   );
 }
 
+export async function getHeaderFromHeight(height: number): Promise<string> {
+  const blockhash = await getBtcBlockHash(height);
+  const block = await getBtcBlock(blockhash);
+  const header = generateBlockHeader(block);
+  return header;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function generateBlockHeaders(
+  fromBlockHeight: number,
+  toBlockHeight?: number,
+  throttleMs: number = 50, // Default throttle delay set to 1000ms (1 second)
+): Promise<{ start: number; headers: string }> {
+  if (toBlockHeight === undefined) {
+    toBlockHeight = await getBlockHeight();
+  }
+  if (toBlockHeight < fromBlockHeight) {
+    throw new Error(
+      `toBlockHeight: ${toBlockHeight} less than fromBlockHeight: ${fromBlockHeight}`,
+    );
+  }
+
+  const iterateOverBlocks = toBlockHeight - fromBlockHeight;
+  const blockHeights: number[] = Array.from(
+    { length: iterateOverBlocks + 1 },
+    (_, i) => fromBlockHeight + i,
+  );
+
+  let concatHeaders = "";
+
+  for (const height of blockHeights) {
+    const blockHeader = await getHeaderFromHeight(height);
+    concatHeaders += blockHeader;
+
+    // Throttle the requests
+    await delay(throttleMs);
+  }
+
+  return {
+    start: fromBlockHeight,
+    headers: concatHeaders,
+  };
+}
+
 export function getExpectedTarget(block: Block) {
-  return "0x"+block.bits.slice(3).padEnd(45, "0").padStart(64, "0");
+  return "0x" + block.bits.slice(3).padEnd(45, "0").padStart(64, "0");
 }
