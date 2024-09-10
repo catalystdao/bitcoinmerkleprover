@@ -1,8 +1,16 @@
 import axios from "axios";
 import "dotenv/config";
 import { getProof } from "./lib/bitcoin-proof";
+import mempoolJS from "@catalabs/mempool.js";
 
-import type { Block, Transaction, Proof } from "./types";
+const TESTNET = process.env.TESTNET;
+const {
+  bitcoin: { transactions, blocks },
+} = mempoolJS({
+  hostname: "mempool.space",
+});
+
+import type { Block, Proof } from "./types";
 
 export function swapEndian(hex: string): string {
   // Ensure the hex string has an even number of characters
@@ -19,99 +27,32 @@ export function swapEndian(hex: string): string {
   return reversedHex;
 }
 
-const BTC_RPC = process.env.BTC_RPC;
-if (BTC_RPC === undefined)
-  throw Error("No Bitcoin RPC Error (env.BTC_RPC === UNDEFINED)");
-const getBlocksURL = BTC_RPC ? BTC_RPC : "";
-
-export async function getBtcBlockHash(height: number): Promise<string> {
-  const res = await axios.post(
-    getBlocksURL,
-    JSON.stringify({
-      jsonrpc: "2.0",
-      method: "getblockhash",
-      params: [height],
-      id: "getblock.io",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    },
-  );
-  return res.data.result;
-}
-
-export async function getBtcBlock(blockhash: string): Promise<Block> {
-  // Get the "bestblock" information
-  const res = await axios.post(
-    getBlocksURL,
-    JSON.stringify({
-      jsonrpc: "2.0",
-      method: "getblock",
-      params: [blockhash, 1],
-      id: "getblock.io",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    },
-  );
-  return res.data.result;
-}
-
-export async function getBlockHeight(): Promise<number> {
-  const res = await axios.post(
-    getBlocksURL,
-    JSON.stringify({
-      jsonrpc: "2.0",
-      method: "getblockcount",
-      params: [],
-      id: "getblock.io",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    },
-  );
-  return res.data.result;
-}
-
-export async function getRawTransaction(txid: string): Promise<Transaction> {
-  const res = await axios.post(
-    getBlocksURL,
-    JSON.stringify({
-      jsonrpc: "2.0",
-      method: "getrawtransaction",
-      params: [txid, true, null],
-      id: "getblock.io",
-    }),
-    {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    },
-  );
-  return res.data.result;
-}
-
 export async function generateProof(
   txid: string,
 ): Promise<{ blockHeader: string; proof: Proof; rawTx: string }> {
-  const tx = await getRawTransaction(txid);
+  const tx = await transactions.getTx({ txid });
 
-  const block = await getBtcBlock(tx.blockhash);
-  const txIndex: number = block.tx.indexOf(txid);
-  const proof = await getProof(block.tx, txIndex);
-  const blockHeader = generateBlockHeader(block);
+  const merkleProof = await transactions.getTxMerkleProof({ txid });
+  // TODO: serialisation version 1.
+  const rawTx = await transactions.getTxRaw({ txid });
 
-  return { blockHeader, proof, rawTx: tx.hex };
+  const blockHash = await blocks.getBlockHeight({
+    height: merkleProof.block_height,
+  });
+  // const block = await blocks.getBlock({ hash: blockHash });
+
+  // const blockHeader = generateBlockHeader(block);
+  const blockHeader = await blocks.getBlockHeader({ hash: blockHash });
+
+  return {
+    blockHeader,
+    proof: {
+      txId: txid,
+      txIndex: merkleProof.pos,
+      sibling: merkleProof.merkle,
+    },
+    rawTx,
+  };
 }
 
 export function generateBlockHeader(block: {
@@ -134,13 +75,6 @@ export function generateBlockHeader(block: {
   );
 }
 
-export async function getHeaderFromHeight(height: number): Promise<string> {
-  const blockhash = await getBtcBlockHash(height);
-  const block = await getBtcBlock(blockhash);
-  const header = generateBlockHeader(block);
-  return header;
-}
-
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -151,7 +85,7 @@ export async function generateBlockHeaders(
   throttleMs: number = 50, // Default throttle delay set to 1000ms (1 second)
 ): Promise<{ start: number; headers: string }> {
   if (toBlockHeight === undefined) {
-    toBlockHeight = await getBlockHeight();
+    toBlockHeight = await blocks.getBlocksTipHeight();
   }
   if (toBlockHeight < fromBlockHeight) {
     throw new Error(
@@ -168,7 +102,8 @@ export async function generateBlockHeaders(
   let concatHeaders = "";
 
   for (const height of blockHeights) {
-    const blockHeader = await getHeaderFromHeight(height);
+    const hash = await blocks.getBlockHeight({ height });
+    const blockHeader = await blocks.getBlockHeader({ hash });
     concatHeaders += blockHeader;
 
     // Throttle the requests

@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@catalabs/mempool.js": "^2.3.3",
     "axios": "^1.6.7",
     "dotenv": "^16.4.5"
   },
