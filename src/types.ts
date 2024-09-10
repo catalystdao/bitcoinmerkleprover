@@ -20,39 +20,9 @@ export type Block = {
   tx: string[];
 };
 
-export type Input = {
-  txid: string;
-  vout: number;
-  scriptSig: any;
-  txinwitness: any;
-  sequence: number;
-};
-
-export type Output = {
-  value: number;
-  n: number;
-  scriptPubKey: any;
-};
-
-export type Transaction = {
-  txid: string;
-  hash: string;
-  version: number;
-  size: number;
-  vsize: number;
-  weight: number;
-  locktime: number;
-  vin: Input[];
-  vout: Output[];
-  hex: string;
-  blockhash: string;
-  confirmations: number;
-  time: number;
-  blocktime: number;
-};
-
 export type Proof = {
   txId: string;
   txIndex: number;
   sibling: string[];
+  concatedSiblings: string;
 };

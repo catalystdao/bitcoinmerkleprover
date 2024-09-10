@@ -6,6 +6,7 @@ const {
   bitcoin: { transactions, blocks },
 } = mempoolJS({
   hostname: "mempool.space",
+  network: TESTNET ? "testnet4" : undefined,
 });
 
 import type { Block, Proof } from "./types";
@@ -118,7 +119,7 @@ export async function generateBlockHeaders(
   };
 }
 
-// TODO: fix
-export function getExpectedTarget(block: Block) {
-  return "0x" + block.bits.slice(3).padEnd(45, "0").padStart(64, "0");
+export function getExpectedTarget(block: { bits: number }) {
+  const hexBits = block.bits.toString(16);
+  return "0x" + hexBits.slice(3).padEnd(45, "0").padStart(64, "0");
 }
