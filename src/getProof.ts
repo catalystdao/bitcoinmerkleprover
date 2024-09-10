@@ -1,6 +1,4 @@
-import axios from "axios";
 import "dotenv/config";
-import { getProof } from "./lib/bitcoin-proof";
 import mempoolJS from "@catalabs/mempool.js";
 
 const TESTNET = process.env.TESTNET;
@@ -34,11 +32,12 @@ export async function generateProof(
 
   const merkleProof = await transactions.getTxMerkleProof({ txid });
   // TODO: serialisation version 1.
-  const rawTx = await transactions.getTxRaw({ txid });
+  const rawTx = await transactions.getTxHex({ txid });
 
   const blockHash = await blocks.getBlockHeight({
     height: merkleProof.block_height,
   });
+  console.log(rawTx);
   // const block = await blocks.getBlock({ hash: blockHash });
 
   // const blockHeader = generateBlockHeader(block);
@@ -50,6 +49,9 @@ export async function generateProof(
       txId: txid,
       txIndex: merkleProof.pos,
       sibling: merkleProof.merkle,
+      concatedSiblings: merkleProof.merkle.reduce(
+        (accumulator, currentValue) => accumulator + currentValue,
+      ),
     },
     rawTx,
   };
@@ -116,6 +118,7 @@ export async function generateBlockHeaders(
   };
 }
 
+// TODO: fix
 export function getExpectedTarget(block: Block) {
   return "0x" + block.bits.slice(3).padEnd(45, "0").padStart(64, "0");
 }
