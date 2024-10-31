@@ -1,6 +1,9 @@
 import "dotenv/config";
 import mempoolJS from "@catalabs/mempool.js";
 
+import type { Block, Proof } from "./types";
+import { decodeTransaction, encodeTransaction } from "./lib/bitcoinTransactionLibrary";
+
 const TESTNET = process.env.TESTNET;
 const {
   bitcoin: { transactions, blocks },
@@ -9,7 +12,6 @@ const {
   network: TESTNET ? "testnet4" : undefined,
 });
 
-import type { Block, Proof } from "./types";
 
 export function swapEndian(hex: string): string {
   // Ensure the hex string has an even number of characters
@@ -41,6 +43,9 @@ export async function generateProof(
   console.log(rawTx);
   // const block = await blocks.getBlock({ hash: blockHash });
 
+  const decodedTransaction = decodeTransaction(rawTx);
+  const rawTxWitnessStripped = encodeTransaction(decodedTransaction, false);
+
   // const blockHeader = generateBlockHeader(block);
   const blockHeader = await blocks.getBlockHeader({ hash: blockHash });
 
@@ -54,7 +59,7 @@ export async function generateProof(
         (accumulator, currentValue) => accumulator + currentValue,
       ),
     },
-    rawTx,
+    rawTx: rawTxWitnessStripped,
   };
 }
 
